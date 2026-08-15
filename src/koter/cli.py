@@ -1,4 +1,4 @@
-"""CLI principal para Koter usando argparse."""
+"""Main CLI for Koter using argparse."""
 
 import argparse
 import sys
@@ -9,15 +9,15 @@ from .render import render_result, render_search_results
 
 
 def create_parser() -> argparse.ArgumentParser:
-    """Crea el parser de argparse desde el registro de comandos."""
+    """Creates the argparse parser from the command registry."""
     parser = argparse.ArgumentParser(
         prog="koter",
         description="Koter - Offline Markdown note-taking CLI"
     )
     
-    subparsers = parser.add_subparsers(dest="command", help="Comando a ejecutar")
+    subparsers = parser.add_subparsers(dest="command", help="Command to execute")
     
-    # Registrar solo comandos principales (no aliases)
+    # Register only main commands (not aliases)
     seen = set()
     for name, cmd in sorted(COMMANDS.items()):
         if cmd.name in seen:
@@ -26,36 +26,36 @@ def create_parser() -> argparse.ArgumentParser:
         
         sub = subparsers.add_parser(cmd.name, help=cmd.help_text, aliases=cmd.aliases)
         
-        # Agregar argumentos según definición
+        # Add arguments according to definition
         if cmd.args:
             for arg in cmd.args:
                 if arg.startswith("--"):
-                    # Argumento opcional
+                    # Optional argument
                     arg_name = arg[2:]
                     sub.add_argument(f"--{arg_name}", dest=arg_name, nargs='?', 
                                     const=True, default=None)
                 else:
-                    # Argumento posicional
+                    # Positional argument
                     sub.add_argument(arg)
     
     return parser
 
 
 def main():
-    """Punto de entrada principal."""
-    # Primero intentar con argparse para --help
+    """Main entry point."""
+    # First try with argparse for --help
     parser = create_parser()
     
-    # Filtrar sys.argv para remover opciones de python -m
-    # python -m koter list -> sys.argv puede ser ['/workspace/src/koter/__main__.py', 'list']
+    # Filter sys.argv to remove python -m options
+    # python -m koter list -> sys.argv may be ['/workspace/src/koter/__main__.py', 'list']
     cli_args = sys.argv[1:]
-    # Remover flags como -m, --module si aparecen
+    # Remove flags like -m, --module if they appear
     cli_args = [a for a in cli_args if a not in ('-m', '--module')]
-    # Si el primer argumento es el nombre del módulo, saltarlo
+    # If first argument is module name, skip it
     if cli_args and cli_args[0] == 'koter':
         cli_args = cli_args[1:]
     
-    # Si no hay argumentos, entrar en modo interactivo (TUI)
+    # If no arguments, enter interactive mode (TUI)
     if len(cli_args) == 0:
         from .tui import run_tui
         run_tui()
@@ -63,23 +63,23 @@ def main():
     
     args = parser.parse_args(cli_args)
     
-    # Manejar caso sin subcomando
+    # Handle case without subcommand
     if not hasattr(args, 'command') or not getattr(args, 'command', None):
         parser.print_help()
         return
     
-    # Ejecutar comando usando el valor ya extraído
+    # Execute command using already extracted value
     cmd_name = args.command
     cmd_args = vars(args)
     cmd_args.pop('command', None)
     
-    # Limpiar valores None y el atributo help si existe
+    # Clean None values and help attribute if exists
     cmd_args = {k: v for k, v in cmd_args.items() if v is not None and k != 'help'}
     
-    # Ejecutar comando
+    # Execute command
     result = dispatch_command(cmd_name, cmd_args)
     
-    # Renderizar salida
+    # Render output
     if result.kind == ResultKind.ERROR:
         lines = render_result(result)
         for line in lines:
@@ -104,7 +104,7 @@ def main():
                 if parts:
                     print(f"  {'  '.join(parts)}")
         else:
-            print("No hay notas.")
+            print("No notes.")
     
     elif result.kind == ResultKind.TEXT:
         print(result.data)

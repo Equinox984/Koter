@@ -1,4 +1,4 @@
-"""Modelos de datos para Koter."""
+"""Data models for Koter."""
 
 from dataclasses import dataclass, field
 from typing import Optional
@@ -6,24 +6,24 @@ from enum import Enum
 
 
 class ResultKind(Enum):
-    """Tipos de resultado que pueden devolver los handlers."""
-    NOTES = "notes"       # Lista de notas para renderizar
-    TEXT = "text"         # Texto plano (ej: config show)
-    MESSAGE = "message"   # Mensaje informativo
+    """Result types that handlers can return."""
+    NOTES = "notes"       # List of notes to render
+    TEXT = "text"         # Plain text (e.g., config show)
+    MESSAGE = "message"   # Informative message
     ERROR = "error"       # Error
 
 
 @dataclass
 class Note:
-    """Representa una nota con su metadata."""
+    """Represents a note with its metadata."""
     slug: str
     title: str
     created: str
     modified: str
     tags: list[str]
     pinned: bool
-    content: str  # Contenido sin frontmatter
-    path: str     # Ruta completa al archivo
+    content: str  # Content without frontmatter
+    path: str     # Full file path
     
     def __post_init__(self):
         if not isinstance(self.tags, list):
@@ -32,7 +32,7 @@ class Note:
 
 @dataclass
 class SearchResult:
-    """Resultado de una búsqueda."""
+    """Search result."""
     file_path: str
     line_number: int
     line_content: str
@@ -41,7 +41,7 @@ class SearchResult:
 
 @dataclass
 class Result:
-    """Resultado uniforme de un comando."""
+    """Uniform result from a command."""
     kind: ResultKind
     data: any = None
     message: str = ""

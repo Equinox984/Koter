@@ -1,4 +1,4 @@
-"""Punto de entrada para ejecutar como módulo."""
+"""Entry point for running as a module."""
 
 from .cli import main
 
