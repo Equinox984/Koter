@@ -1,0 +1,2 @@
+[console_scripts]
+koter = koter.cli:main

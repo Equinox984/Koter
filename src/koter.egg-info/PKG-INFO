@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: koter
+Version: 0.1.0
+Summary: Offline Markdown note-taking CLI
+Requires-Python: >=3.11
+License-File: LICENSE
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Dynamic: license-file

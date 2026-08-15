@@ -22,7 +22,7 @@ def create_parser() -> argparse.ArgumentParser:
         if cmd.name != name:
             continue
         
-        sub = subparsers.add_parser(name, help=cmd.help_text, aliases=cmd.aliases)
+        sub = subparsers.add_parser(cmd.name, help=cmd.help_text, aliases=cmd.aliases)
         
         # Agregar argumentos según definición
         if cmd.args:
@@ -34,7 +34,7 @@ def create_parser() -> argparse.ArgumentParser:
                                     const=True, default=None)
                 else:
                     # Argumento posicional
-                    sub.add_argument(arg, nargs='?')
+                    sub.add_argument(arg)
     
     return parser
 
@@ -44,16 +44,25 @@ def main():
     # Primero intentar con argparse para --help
     parser = create_parser()
     
+    # Filtrar sys.argv para remover opciones de python -m
+    # python -m koter list -> sys.argv = ['-m', 'koter', 'list'] o similar
+    cli_args = sys.argv[1:]
+    # Remover flags como -m, --module si aparecen
+    cli_args = [a for a in cli_args if a not in ('-m', '--module')]
+    # Si el primer argumento es el nombre del módulo, saltarlo
+    if cli_args and cli_args[0] == 'koter':
+        cli_args = cli_args[1:]
+    
     # Si no hay argumentos, entrar en modo interactivo (TUI)
-    if len(sys.argv) == 1:
+    if len(cli_args) == 0:
         from .tui import run_tui
         run_tui()
         return
     
-    args = parser.parse_args()
+    args = parser.parse_args(cli_args)
     
     # Manejar caso sin subcomando
-    if not hasattr(args, 'command') or not args.command:
+    if not hasattr(args, 'command') or not getattr(args, 'command', None):
         parser.print_help()
         return
     
