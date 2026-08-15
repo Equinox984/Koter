@@ -17,10 +17,12 @@ def create_parser() -> argparse.ArgumentParser:
     
     subparsers = parser.add_subparsers(dest="command", help="Comando a ejecutar")
     
+    # Registrar solo comandos principales (no aliases)
+    seen = set()
     for name, cmd in sorted(COMMANDS.items()):
-        # Solo crear subparser para comandos principales (no aliases)
-        if cmd.name != name:
+        if cmd.name in seen:
             continue
+        seen.add(cmd.name)
         
         sub = subparsers.add_parser(cmd.name, help=cmd.help_text, aliases=cmd.aliases)
         
@@ -45,7 +47,7 @@ def main():
     parser = create_parser()
     
     # Filtrar sys.argv para remover opciones de python -m
-    # python -m koter list -> sys.argv = ['-m', 'koter', 'list'] o similar
+    # python -m koter list -> sys.argv puede ser ['/workspace/src/koter/__main__.py', 'list']
     cli_args = sys.argv[1:]
     # Remover flags como -m, --module si aparecen
     cli_args = [a for a in cli_args if a not in ('-m', '--module')]
@@ -66,7 +68,8 @@ def main():
         parser.print_help()
         return
     
-    # Convertir argumentos namespace a dict
+    # Ejecutar comando usando el valor ya extraído
+    cmd_name = args.command
     cmd_args = vars(args)
     cmd_args.pop('command', None)
     
@@ -74,7 +77,7 @@ def main():
     cmd_args = {k: v for k, v in cmd_args.items() if v is not None and k != 'help'}
     
     # Ejecutar comando
-    result = dispatch_command(args.command, cmd_args)
+    result = dispatch_command(cmd_name, cmd_args)
     
     # Renderizar salida
     if result.kind == ResultKind.ERROR:
