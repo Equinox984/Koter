@@ -1,4 +1,4 @@
-"""Registro de comandos y handlers para Koter."""
+"""Command registry and handlers for Koter."""
 
 import os
 import shlex
@@ -16,7 +16,7 @@ from .config import load_config, get_config_value, set_config_value, save_config
 
 @dataclass
 class Command:
-    """Definición de un comando."""
+    """Command definition."""
     name: str
     handler: Callable
     help_text: str
@@ -35,7 +35,7 @@ COMMANDS: dict[str, Command] = {}
 
 
 def register_command(name: str, help_text: str, aliases: list[str] = None, args: list[str] = None):
-    """Decorador para registrar un comando."""
+    """Decorator to register a command."""
     def decorator(func: Callable) -> Callable:
         cmd = Command(name=name, handler=func, help_text=help_text, aliases=aliases or [], args=args or [])
         COMMANDS[name] = cmd
@@ -46,21 +46,21 @@ def register_command(name: str, help_text: str, aliases: list[str] = None, args:
 
 
 def open_editor(path: str) -> None:
-    """Abre el editor configurado para un archivo."""
+    """Opens the configured editor for a file."""
     config = load_config()
     editor = config.get("editor") or os.environ.get("EDITOR") or "vim"
     
-    # Ejecutar editor
+    # Run editor
     subprocess.run([editor, path])
 
 
 @register_command(
     "new",
-    "Crear una nueva nota",
+    "Create a new note",
     args=["title", "--tags"]
 )
 def cmd_new(title: str, tags: str = None) -> Result:
-    """Crea una nueva nota y abre el editor."""
+    """Creates a new note and opens the editor."""
     tag_list = []
     if tags:
         tag_list = [t.strip() for t in tags.split(",")]
@@ -68,144 +68,148 @@ def cmd_new(title: str, tags: str = None) -> Result:
     note = create_note(title, tag_list)
     open_editor(note.path)
     
-    # Recargar después de editar
+    # Reload after editing
     note = get_note(note.slug)
-    return Result.message(f"Nota '{note.title}' creada en {note.path}")
+    return Result.message(f"Note '{note.title}' created at {note.path}")
 
 
 @register_command(
     "capture",
-    "Crear nota con contenido desde stdin",
+    "Create note with content from stdin",
     args=["title"]
 )
 def cmd_capture(title: str) -> Result:
-    """Crea una nota con contenido leído desde stdin."""
+    """Creates a note with content read from stdin."""
     import sys
     content = sys.stdin.read()
     
     note = create_note(title, [])
     update_note(note.slug, content.strip())
     
-    return Result.message(f"Nota '{note.title}' capturada")
+    return Result.message(f"Note '{note.title}' captured")
 
 
 @register_command(
     "list",
-    "Listar notas",
+    "List notes",
     aliases=["ls"],
     args=["--tag", "--pinned"]
 )
 def cmd_list(tag: str = None, pinned: bool = False) -> Result:
-    """Lista todas las notas visibles."""
+    """Lists all visible notes."""
     notes = list_notes(tag=tag, pinned_only=pinned)
     return Result.notes(notes)
 
 
 @register_command(
     "edit",
-    "Editar una nota existente",
+    "Edit an existing note",
     aliases=["e"],
     args=["slug"]
 )
 def cmd_edit(slug: str) -> Result:
-    """Abre una nota en el editor."""
+    """Opens a note in the editor."""
     note = get_note(slug)
     if note is None:
-        return Result.error(f"Nota '{slug}' no encontrada")
+        return Result.error(f"Note '{slug}' not found")
     
     open_editor(note.path)
     
-    # Recargar después de editar
+    # Reload after editing
     note = get_note(slug)
-    return Result.message(f"Nota '{note.title}' editada")
+    return Result.message(f"Note '{note.title}' edited")
 
 
 @register_command(
     "view",
-    "Ver contenido de una nota",
+    "View note content",
     args=["slug"]
 )
 def cmd_view(slug: str) -> Result:
-    """Muestra el contenido de una nota."""
+    """Displays the content of a note."""
     note = get_note(slug)
     if note is None:
-        return Result.error(f"Nota '{slug}' no encontrada")
+        return Result.error(f"Note '{slug}' not found")
     
     return Result.text(note.content)
 
 
 @register_command(
     "search",
-    "Buscar texto en notas",
+    "Search text in notes",
     aliases=["sr"],
     args=["query"]
 )
 def cmd_search(query: str) -> Result:
-    """Busca texto en título y cuerpo de notas."""
-    # Implementación básica para Fase 0 - se completará en Fase 2
+    """Searches text in title and body of notes."""
+    # Basic implementation for Phase 0 - will be completed in Phase 2
     from .search import search_notes
+    from .render import render_search_results
     results = search_notes(query)
-    return Result.notes(results) if results else Result.message("No se encontraron coincidencias")
+    if not results:
+        return Result.message("No matches found")
+    lines = render_search_results(results)
+    return Result.text("\n".join(lines))
 
 
 @register_command(
     "rm",
-    "Mover nota a papelera",
+    "Move note to trash",
     aliases=["delete", "del"],
     args=["slug"]
 )
 def cmd_rm(slug: str) -> Result:
-    """Mueve una nota a la papelera."""
+    """Moves a note to the trash."""
     if move_to_trash(slug):
-        return Result.message(f"Nota movida a papelera")
-    return Result.error(f"Nota '{slug}' no encontrada")
+        return Result.message(f"Note moved to trash")
+    return Result.error(f"Note '{slug}' not found")
 
 
 @register_command(
     "restore",
-    "Restaurar nota desde papelera",
+    "Restore note from trash",
     args=["slug"]
 )
 def cmd_restore(slug: str) -> Result:
-    """Restaura una nota desde la papelera."""
+    """Restores a note from the trash."""
     if restore_from_trash(slug):
-        return Result.message(f"Nota restaurada")
-    return Result.error(f"No se encontró '{slug}' en papelera")
+        return Result.message(f"Note restored")
+    return Result.error(f"'{slug}' not found in trash")
 
 
 @register_command(
     "history",
-    "Ver historial de versiones",
+    "View version history",
     args=["slug"]
 )
 def cmd_history(slug: str) -> Result:
-    """Lista snapshots de una nota."""
+    """Lists snapshots of a note."""
     # Para Fase 0 - se implementará en Fase 3
-    return Result.message("Historial no implementado aún")
+    return Result.message("History not implemented yet")
 
 
 @register_command(
     "revert",
-    "Revertir a versión anterior",
+    "Revert to previous version",
     args=["slug", "id"]
 )
 def cmd_revert(slug: str, id: str) -> Result:
-    """Restaura una versión anterior."""
+    """Restores a previous version."""
     # Para Fase 0 - se implementará en Fase 3
-    return Result.message("Revert no implementado aún")
+    return Result.message("Revert not implemented yet")
 
 
 @register_command(
     "config",
-    "Gestionar configuración",
+    "Manage configuration",
     args=["action", "key", "value"]
 )
 def cmd_config(action: str, key: str = None, value: str = None) -> Result:
-    """Muestra o modifica configuración."""
+    """Shows or modifies configuration."""
     config = load_config()
     
     if action == "show":
-        # Formatear config para mostrar
+        # Format config for display
         lines = []
         for k, v in config.items():
             if isinstance(v, dict):
@@ -217,69 +221,69 @@ def cmd_config(action: str, key: str = None, value: str = None) -> Result:
     
     elif action == "get":
         if not key:
-            return Result.error("Se requiere clave para 'get'")
+            return Result.error("Key required for 'get'")
         val = get_config_value(key)
         if val is not None:
             return Result.text(str(val))
-        return Result.error(f"Clave '{key}' no encontrada")
+        return Result.error(f"Key '{key}' not found")
     
     elif action == "set":
         if not key or value is None:
-            return Result.error("Se requiere clave y valor para 'set'")
+            return Result.error("Key and value required for 'set'")
         set_config_value(key, value)
-        return Result.message(f"Configuración actualizada: {key} = {value}")
+        return Result.message(f"Configuration updated: {key} = {value}")
     
     elif action == "edit":
         from .config import CONFIG_FILE
         if not CONFIG_FILE.exists():
-            # Crear archivo vacío con defaults
+            # Create empty file with defaults
             save_config(config)
         open_editor(str(CONFIG_FILE))
-        return Result.message("Configuración editada")
+        return Result.message("Configuration edited")
     
-    return Result.error(f"Acción desconocida: {action}")
+    return Result.error(f"Unknown action: {action}")
 
 
 @register_command(
     "tag",
-    "Gestionar tags",
+    "Manage tags",
     args=["subcommand", "slug", "tag"]
 )
 def cmd_tag(subcommand: str, slug: str = None, tag: str = None) -> Result:
-    """Gestiona tags de notas."""
-    # Para Fase 1
-    return Result.message("Comando tag no implementado aún")
+    """Manages note tags."""
+    # For Phase 1
+    return Result.message("Tag command not implemented yet")
 
 
 @register_command(
     "pin",
-    "Fijar nota",
+    "Pin note",
     args=["slug"]
 )
 def cmd_pin(slug: str) -> Result:
-    """Fija una nota."""
-    # Para Fase 1
-    return Result.message("Comando pin no implementado aún")
+    """Pins a note."""
+    # For Phase 1
+    return Result.message("Pin command not implemented yet")
 
 
 @register_command(
     "unpin",
-    "Desfijar nota",
+    "Unpin note",
     args=["slug"]
 )
 def cmd_unpin(slug: str) -> Result:
-    """Desfija una nota."""
-    # Para Fase 1
-    return Result.message("Comando unpin no implementado aún")
+    """Unpins a note."""
+    # For Phase 1
+    return Result.message("Unpin command not implemented yet")
 
 
 @register_command(
     "help",
-    "Mostrar ayuda",
+    "Show help",
     aliases=["h", "?"]
 )
 def cmd_help(command: str = None) -> Result:
-    """Muestra ayuda general o de un comando específico."""
+    """Shows general help or help for a specific command."""
     if command and command in COMMANDS:
         cmd = COMMANDS[command]
         lines = [
@@ -290,8 +294,8 @@ def cmd_help(command: str = None) -> Result:
             lines.append(f"  Args: {', '.join(cmd.args)}")
         return Result.text("\n".join(lines))
     
-    # Ayuda general
-    lines = ["Comandos disponibles:", ""]
+    # General help
+    lines = ["Available commands:", ""]
     seen = set()
     for name, cmd in sorted(COMMANDS.items()):
         if cmd.name in seen:
@@ -304,21 +308,21 @@ def cmd_help(command: str = None) -> Result:
 
 
 def dispatch_command(name: str, args: dict) -> Result:
-    """Ejecuta un comando con sus argumentos."""
+    """Executes a command with its arguments."""
     if name not in COMMANDS:
-        return Result.error(f"Comando desconocido: {name}")
+        return Result.error(f"Unknown command: {name}")
     
     cmd = COMMANDS[name]
     try:
         return cmd.handler(**args)
     except TypeError as e:
-        return Result.error(f"Error en argumentos: {e}")
+        return Result.error(f"Argument error: {e}")
     except Exception as e:
         return Result.error(str(e))
 
 
 def parse_cli_args(args: list[str]) -> tuple[str, dict]:
-    """Parsea argumentos CLI simples."""
+    """Parses simple CLI arguments."""
     if not args:
         return "help", {}
     
@@ -348,7 +352,7 @@ def parse_cli_args(args: list[str]) -> tuple[str, dict]:
             positional.append(arg)
             i += 1
     
-    # Asignar posicionales según orden esperado
+    # Assign positionals according to expected order
     if expected_args:
         for idx, arg_name in enumerate(expected_args):
             if not arg_name.startswith("--"):

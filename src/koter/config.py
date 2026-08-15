@@ -1,4 +1,4 @@
-"""Configuración de Koter usando TOML estándar."""
+"""Koter configuration using standard TOML."""
 
 import os
 import tomllib
@@ -6,33 +6,33 @@ from pathlib import Path
 from typing import Any
 
 
-# Rutas por defecto
+# Default paths
 DEFAULT_VAULT = Path.home() / "Koter"
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "koter"
 CONFIG_FILE = CONFIG_DIR / "config.toml"
 
 
 def get_default_config() -> dict:
-    """Devuelve la configuración por defecto."""
+    """Returns default configuration."""
     return {
         "vault": str(DEFAULT_VAULT),
-        "editor": "",  # Vacío = usar $EDITOR
+        "editor": "",  # Empty = use $EDITOR
         "theme": "mono",
         "history": {
-            "keep": 100  # 0 = sin límite
+            "keep": 100  # 0 = no limit
         }
     }
 
 
 def load_config() -> dict:
-    """Carga la configuración desde el archivo TOML."""
+    """Loads configuration from TOML file."""
     config = get_default_config()
     
     if CONFIG_FILE.exists():
         try:
             with open(CONFIG_FILE, "rb") as f:
                 file_config = tomllib.load(f)
-                # Fusionar con defaults
+                # Merge with defaults
                 for key, value in file_config.items():
                     if isinstance(value, dict) and key in config:
                         config[key].update(value)
@@ -41,7 +41,7 @@ def load_config() -> dict:
         except (tomllib.TOMLDecodeError, IOError):
             pass
     
-    # Variable de entorno puede sobrescribir vault
+    # Environment variable can override vault
     env_vault = os.environ.get("KOTER_VAULT")
     if env_vault:
         config["vault"] = env_vault
@@ -50,13 +50,13 @@ def load_config() -> dict:
 
 
 def save_config(config: dict) -> None:
-    """Guarda la configuración al archivo TOML."""
+    """Saves configuration to TOML file."""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     
-    # Construir TOML manualmente (sin librerías externas de escritura)
+    # Build TOML manually (no external write libraries)
     lines = []
     
-    # Claves simples primero
+    # Simple keys first
     simple_keys = ["vault", "editor", "theme"]
     for key in simple_keys:
         if key in config:
@@ -66,7 +66,7 @@ def save_config(config: dict) -> None:
             else:
                 lines.append(f"{key} = {value}")
     
-    # Sección history
+    # History section
     if "history" in config and isinstance(config["history"], dict):
         lines.append("")
         lines.append("[history]")
@@ -77,7 +77,7 @@ def save_config(config: dict) -> None:
 
 
 def get_config_value(key: str, subkey: str = None) -> Any:
-    """Obtiene un valor específico de la configuración."""
+    """Gets a specific value from configuration."""
     config = load_config()
     
     if subkey:
@@ -86,7 +86,7 @@ def get_config_value(key: str, subkey: str = None) -> Any:
 
 
 def set_config_value(key: str, value: Any, subkey: str = None) -> None:
-    """Establece un valor en la configuración y guarda."""
+    """Sets a value in configuration and saves."""
     config = load_config()
     
     if subkey:
@@ -100,7 +100,7 @@ def set_config_value(key: str, value: Any, subkey: str = None) -> None:
 
 
 def ensure_vault_exists() -> Path:
-    """Asegura que el vault existe y devuelve su ruta."""
+    """Ensures vault exists and returns its path."""
     config = load_config()
     vault = Path(config["vault"])
     vault.mkdir(parents=True, exist_ok=True)
