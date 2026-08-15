@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "koter"
+version = "0.1.0"
+description = "Offline Markdown note-taking CLI"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+koter = "koter.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
